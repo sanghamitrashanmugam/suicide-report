@@ -3,7 +3,6 @@ library(tidyverse)
 library(fitdistrplus)
 
 # load the data
-#This is a comment
 suicides <- read.csv('master.csv', header = TRUE, sep = ',')
 suicides
 
