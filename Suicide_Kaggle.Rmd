@@ -1,0 +1,305 @@
+---
+title: "Suicide_Report"
+output: html_document
+Author: "Sanghamitra Shanmugam"
+---
+
+##Hypothesis testing for the Confidence interval for the mean number of suicides committed by males in the year 1988 with 95% confidence
+
+Considering the data of the number of suicides all over the world in the year 1988, we can make the observations that the number of suicides committed by males across the world in the year 1988 follows a normal distribution.
+
+The qq plot,pp plot, Cullen and frey graph together clearly hold up that the male number of suicides follows a normal distribution.
+
+Here, we are trying to find the confidence interval for the mean number of suicides committed by men in that year.
+
+###Stating the Hypothesis below : 
+
+Null Hypothesis      **Ho : Sample mean  = population mean**
+Alternate Hypothesis **H1 : Sample mean != population mean**
+
+To conduct the test, we use t.test() function, and for one sample, the inputs given are the vectors for the number of suicdes using the sample() function. The outputs returned are the t-value, p-value, alternative hypothesis statement, 95% confidence interval value and the mean of the sample vectors. 
+```{r}
+library(tidyverse)
+library(fitdistrplus)
+library(ggplot2)
+
+# load the data
+suicides <- read.csv('master.csv', header = TRUE, sep = ',')
+names(suicides) [names(suicides) == "ï..country"] <- "country"
+
+#Question
+#CI of mean number of male suicides in the year 1988
+#Number of suicides committed by male in the year 1988
+suicides_1988_male <- filter(suicides, suicides$year == 1988 & suicides$sex == 'male')
+suicide_male <- suicides_1988_male %>%
+  dplyr::select(country, suicides.100k.pop)%>%
+  group_by(country) %>%
+  summarise(Total_suicides = round(sum(suicides.100k.pop)))
+
+#Plotting histogram 
+ggplot(suicide_male, aes(x= suicide_male$Total_suicides)) + geom_histogram(color = "black", fill = 'steelblue')
+fitdist_n <- fitdist(suicide_male$Total_suicides, "norm")
+summary(fitdist_n)
+
+#The Cullen and Frey graph
+descdist(suicide_male$Total_suicides)
+par(mfrow=c(2,2))
+plot.legend <- c("normal") 
+fit_n <- fitdist(suicide_male$Total_suicides, "norm") 
+summary(fit_n)
+denscomp(list(fit_n), legendtext = plot.legend, xlab = 'Total suicides') 
+cdfcomp (list(fit_n), legendtext = plot.legend, xlab = 'Total suicides') 
+qqcomp (list(fit_n), legendtext = plot.legend, xlab = 'Total suicides') 
+ppcomp (list(fit_n), legendtext = plot.legend, xlab = 'Total suicides')
+
+
+#Performing t test to test the hypothesis
+pop_mean <- mean(suicide_male$Total_suicides)
+suicide_male_sample <- sample_n(suicide_male, 15)
+Tcalc <- stats::t.test(suicide_male_sample$Total_suicides, mu = pop_mean, alternative = "two.sided")
+tvalue <- round(qt(0.025 , 14), 3)
+
+m = 0
+std = 1
+
+funcShaded <- function(x, lower_bound, upper_bound) {
+  y = dnorm(x, mean = m, sd = std)
+  y[x > lower_bound & x < upper_bound] <- NA
+  return(y)
+}
+
+ggplot(data.frame(x = c(m - (5*std), m + (5*std))), aes(x = x)) + 
+  stat_function(fun = dnorm, args = list(mean = m, sd = std)) + 
+  stat_function(fun = funcShaded, args = list(lower_bound = tvalue, upper_bound = -tvalue), 
+                geom = "area", fill = "red", alpha = .2) + 
+  scale_x_continuous(breaks = c(m - (3*std), m + (3*std), m, tvalue, -tvalue, round(as.numeric(Tcalc["statistic"]), 3 ))) + theme(axis.text.y = element_blank())
+```
+As the p-value > 0.05 and by plotting my graph we can see that Tcalc does not fall in the rejection region. Hence, we fail to reject the null hypothesis and conclude that there is no significant difference between the sample mean of number of suicides by male and population mean of number of suicides by male.
+
+
+##The Confidence Interval for the mean number of suicides committed by male in 1988 with 95% confidence.
+
+Now we tried to find out the confidence interval for the mean number of suicides committed by male n 1988 with 95% confidence. 
+Using the sample_n() function, we took out 15 samples from the male suicide population of 1988. Using the formula and  the qt() function, we can find out the lower limit and the upper limit of the confidence interval with 95% confidence.
+
+```{r}
+# load the data
+suicides <- read.csv('master.csv', header = TRUE, sep = ',')
+names(suicides) [names(suicides) == "ï..country"] <- "country"
+
+#Question
+#CI of mean number of male suicides in the year 1988
+#Number of suicides committed by male in the year 1988
+suicides_1988_male <- filter(suicides, suicides$year == 1988 & suicides$sex == 'male')
+suicide_male <- suicides_1988_male %>%
+  dplyr::select(country, suicides.100k.pop)%>%
+  group_by(country) %>%
+  summarise(Total_suicides = round(sum(suicides.100k.pop)))
+
+suicide_male_sample <- sample_n(suicide_male, 15)
+sample_mean <- round(mean(suicide_male_sample$Total_suicides))
+sample_sd <- sd(suicide_male_sample$Total_suicides)
+n <- length(suicide_male_sample$Total_suicides)
+e <- qt(0.975, n-1) * (sample_sd/sqrt(n))
+lower_limit <- round(sample_mean - e, 3)
+upper_limit <- round(sample_mean + e, 3)
+
+m = sample_mean
+std = 25
+
+funcShaded <- function(x, lower_bound, upper_bound) {
+  y = dnorm(x, mean = m, sd = std)
+  y[x > lower_bound & x < upper_bound] <- NA
+  return(y)
+}
+
+ggplot(data.frame(x = c(m - (5*std), m + (5*std))), aes(x = x)) + 
+  stat_function(fun = dnorm, args = list(mean = m, sd = std)) + 
+  stat_function(fun = funcShaded, args = list(lower_bound = lower_limit, upper_bound = upper_limit), 
+                geom = "area", fill = "red", alpha = .2) + 
+  scale_x_continuous(breaks = c(m - (3*std), m + (3*std), m, lower_limit, upper_limit)) + theme(axis.text.y = element_blank())
+
+```
+
+
+For one such sample, we get the confidence interval of mean as **59.86064 < mean < 139.87270** with the value of error alpha being 5%. 
+
+##The Confidence interval for the difference in proportion of the number of suicides committed by the adults aged 75 and above in the male and female suicide population.
+
+Now lets consider two populations of the number of suicides committed by male and the number of suicides committed by female in the years 2000 to 2016. 
+
+Using the pp plot, qq plot, Cullen and frey graph it is clearly evident that both the populations follow a normal distribution. 
+
+In order to calculate lower and upper limits for the difference between two independent proportions, say the proportion of 75+ males who committed suicide among the whole population of number of male suicides and the proportion of 75+ females who committed suicide among the whole population of number of female suicides. 
+```{r}
+#Importing the data set
+suicides <- read.csv('master.csv', header = TRUE, sep = ',')
+#Renaming a field
+names(suicides) [names(suicides) == "ï..country"] <- "country"
+#Difference in proportion 75+ years between male and female suicides in year 2007
+#Male suicides in year 2000 to 2016
+suicides_2000s_male <- filter(suicides, suicides$year >= 2000 & suicides$year <= 2016 & suicides$sex == 'male')
+#Female suicides in year 2000 to 2016
+suicides_2000s_female <- filter(suicides, suicides$year >= 2000 & suicides$year <= 2016 & suicides$sex == 'female')
+
+
+#Making male data fit into a normal distribution
+suicide_male_dist <- suicides_2000s_male %>%
+  dplyr::select(country, age, suicides.100k.pop) %>%
+  group_by(country, age) %>%
+  summarise(Total_suicides = round(sum(suicides.100k.pop)))%>% 
+  filter(Total_suicides > 300 & Total_suicides < 500)
+
+#Plotting the histogram
+ggplot(suicide_male_dist, aes(x= suicide_male_dist$Total_suicides)) + geom_histogram(color = "black", fill = 'steelblue')
+descdist(suicide_male_dist$Total_suicides)
+par(mfrow=c(2,2))
+plot.legend <- c("normal") 
+fit_norm_m <- fitdist(suicide_male_dist$Total_suicides, "norm") 
+summary(fit_norm_m)
+denscomp(list(fit_norm_m), legendtext = plot.legend, xlab = 'Total suicides', xlegend = 'topleft') 
+cdfcomp (list(fit_norm_m), legendtext = plot.legend, xlab = 'Total suicides') 
+qqcomp (list(fit_norm_m), legendtext = plot.legend, xlab = 'Total suicides') 
+ppcomp (list(fit_norm_m), legendtext = plot.legend, xlab = 'Total suicides')
+
+
+#Making female data into normal distribution
+suicide_female_dist <- suicides_2000s_female %>%
+  dplyr::select(country, age, suicides.100k.pop) %>%
+  group_by(country, age) %>%
+  summarise(Total_suicides = round(sum(suicides.100k.pop)))%>%
+  filter(Total_suicides>100 & Total_suicides < 200)
+
+#Plotting the histogram
+ggplot(suicide_female_dist, aes(x= suicide_female_dist$Total_suicides)) + geom_histogram(color = "black", fill = 'steelblue')
+descdist(suicide_female_dist$Total_suicides)
+fit_norm_f <- fitdist(suicide_female_dist$Total_suicides, "norm") 
+par(mfrow=c(2,2))
+summary(fit_norm_f)
+denscomp(list(fit_norm_f), legendtext = plot.legend, xlab = 'Total suicides', xlegend = 'topleft') 
+cdfcomp (list(fit_norm_f), legendtext = plot.legend, xlab = 'Total suicides') 
+qqcomp (list(fit_norm_f), legendtext = plot.legend, xlab = 'Total suicides') 
+ppcomp (list(fit_norm_f), legendtext = plot.legend, xlab = 'Total suicides')
+
+#p1 = Total number of female suicides age 75+/Total number of female suicides
+sample1 <- sample(nrow(suicide_female_dist), size = 15)
+sample_data_female <- suicide_female_dist[sample1,]
+plus_75_female <- sample_data_female %>%
+  filter(age == '75+ years')
+p1 <- sum(plus_75_female$Total_suicides)/sum(sample_data_female$Total_suicides)
+
+
+#p2 = Total number of male suicides age 75+/Total number of male suicides
+sample2 <- sample(nrow(suicide_male_dist), size = 15)
+sample_data_male <- suicide_male_dist[sample2,]
+plus_75_male <- sample_data_male %>%
+  filter(age == '75+ years')
+p2 <- sum(plus_75_male$Total_suicides)/sum(sample_data_male$Total_suicides)
+
+#Calculating the degrees of freedom
+df = nrow(sample_data_male) + nrow(sample_data_female) - 2
+q1 <- 1 - p1
+q2 <- 1 - p2
+error <- qt(0.975, df = df) * sqrt(((p1*q1)/nrow(sample_data_female)) + ((p2*q2)/nrow(sample_data_male)))
+left <- round((p1 - p2) - error,3)
+right <- round((p1 - p2) + error, 3)
+(p1*q1)/nrow(sample_data_female)
+p <- round(p1-p2,3)
+
+
+
+m = p
+std = 0.2
+
+funcShaded <- function(x, lower_bound, upper_bound) {
+  y = dnorm(x, mean = m, sd = std)
+  y[x > lower_bound & x < upper_bound] <- NA
+  return(y)
+}
+
+ggplot(data.frame(x = c(m - (3*std), m + (3*std))), aes(x = x)) + 
+  stat_function(fun = dnorm, args = list(mean = m, sd = std)) + 
+  stat_function(fun = funcShaded, args = list(lower_bound = left, upper_bound = right), 
+                geom = "area", fill = "red", alpha = .2) + 
+  scale_x_continuous(breaks = c(m - (3*std), m + (3*std), m, left, right)) + theme(axis.text.y = element_blank())
+
+
+```
+
+Calculating the upper and lower limit of the difference of proportion between two populations, we get the lower limit as **-0.3370747 < p1 - p2 < 0.2266442**
+The difference of proportion for the number of males aged 75 and above who committed suicide and the number of females aged 75 and above who committed suicide are in the above range with 95% confidence.
+
+##The Confidence interval of difference of means between the male number of suicides and female number of suicides in the years 2000 to 2016.
+
+In order to calculate the difference of means between the male suicides and the female suicides in the year 2000 to 2016, we seperate the data into two populations - male and female. We filter the data with certain values to make the population fit into a normal distribution.
+
+In order to calculate the difference of means with unknown and unequal variances, we first take out the sample of each population of size 15 and perform the t test to find the t value and fix that into the formula to find the error.
+
+Using the formula, we add the error and subtract the error to get the upper limit and lower limit of the confidence interval respectively.
+
+```{r}
+#Importing the data set
+suicides <- read.csv('master.csv', header = TRUE, sep = ',')
+#Renaming a field
+names(suicides) [names(suicides) == "ï..country"] <- "country"
+
+#Male suicides in year 2000 to 2016
+suicides_2000s_male <- filter(suicides, suicides$year >= 2000 & suicides$year <= 2016 & suicides$sex == 'male')
+
+#Female suicides in year 2000 to 2016
+suicides_2000s_female <- filter(suicides, suicides$year >= 2000 & suicides$year <= 2016 & suicides$sex == 'female')
+
+
+#Making male data fit into a normal distribution
+suicide_male_dist <- suicides_2000s_male %>%
+  dplyr::select(country, age, suicides.100k.pop) %>%
+  group_by(country, age) %>%
+  summarise(Total_suicides = round(sum(suicides.100k.pop)))%>% 
+  filter(Total_suicides > 300 & Total_suicides < 500)
+
+#Making female data fit into the normal distribution
+suicide_female_dist <- suicides_2000s_female %>%
+  dplyr::select(country, age, suicides.100k.pop) %>%
+  group_by(country, age) %>%
+  summarise(Total_suicides = round(sum(suicides.100k.pop)))%>%
+  filter(Total_suicides>100 & Total_suicides < 200)
+
+sample_suicide_female <- sample(nrow(suicide_female_dist), size = 15)
+sample_suicide_male <- sample(nrow(suicide_male_dist), size = 15)
+ssf_data <- suicide_female_dist[sample_suicide_female,]
+ssm_data <- suicide_male_dist[sample_suicide_male,]
+ssf_mean <- mean(ssf_data$Total_suicides)
+ssm_mean <- mean(ssm_data$Total_suicides)
+ssf_sd<- sd(sample_suicide_female)
+ssm_sd<- sd(sample_suicide_male)
+err <- qt(0.925, 14) * sqrt((ssf_sd^2/15)+(ssm_sd^2/15))
+mean_diff <- ssf_mean - ssm_mean
+lower_lim <- mean_diff - err
+upper_lim <- mean_diff + err
+lower_lim
+upper_lim
+
+
+m = mean_diff
+std = 10
+
+funcShaded <- function(x, lower_bound, upper_bound) {
+  y = dnorm(x, mean = m, sd = std)
+  y[x > lower_bound & x < upper_bound] <- NA
+  return(y)
+}
+
+ggplot(data.frame(x = c(m - (5*std), m + (5*std))), aes(x = x)) + 
+  stat_function(fun = dnorm, args = list(mean = m, sd = std)) + 
+  stat_function(fun = funcShaded, args = list(lower_bound = lower_lim, upper_bound = upper_lim), 
+                geom = "area", fill = "red", alpha = .2) + 
+  scale_x_continuous(breaks = c(m - (3*std), m + (3*std), m, lower_lim, upper_lim))+
+  theme_minimal()+ theme(axis.text.y = element_blank())
+```
+The above plot is plotted using ggplot and taking the output of one of the samples for the difference of the means. 
+
+The confidence interval for the difference of the means between the male suicides and the female suicides in the year 2000s to 2016 is **-247.3818<  mean1 - mean2 < -218.0849**
+
+The difference of means of the female number of suicides and the male number of suicides is in the above range with 95% confidence where error alpha is 0.05.
+
+Since the upper limit and the lower limit are both negative, clearly the mean number of suicides committed by male is more than mean number of suicides committed by female. We can conclude that men are more prone to suicides than women.
